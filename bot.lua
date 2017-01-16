@@ -1,4 +1,4 @@
-local bot_api_key = "287088244:AAFdqUd9UDJBWD5DEDilvtnqShzSqn_9_8Q" --Your telegram bot api key
+﻿local bot_api_key = "287088244:AAFdqUd9UDJBWD5DEDilvtnqShzSqn_9_8Q" --Your telegram bot api key
 local BASE_URL = "https://api.telegram.org/bot"..bot_api_key
 local BASE_FOLDER = ""
 local start = [[ ]] 
@@ -18,14 +18,14 @@ package.path = package.path .. ';.luarocks/share/lua/5.2/?.lua'
   ..';.luarocks/share/lua/5.2/?/init.lua'
 package.cpath = package.cpath .. ';.luarocks/lib/lua/5.2/?.so'
 URL = require('socket.url')
-JSON = require('dkjson')
+xt = require('dkxt')
 HTTPS = require('ssl.https')
 redis_server = require('redis')
 redis = redis_server.connect('127.0.0.1', 6379)
 
 function sendRequest(url)
   local dat, res = HTTPS.request(url)
-  local tab = JSON.decode(dat)
+  local tab = xt.decode(dat)
 
   if res ~= 200 then
     return false, res

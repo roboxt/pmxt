@@ -1,7 +1,7 @@
     -- Module options:
     local always_try_using_lpeg = true
     local register_global_module_table = false
-    local global_module_name = 'json'
+    local global_module_name = 'xt'
 
 
 local pairs, type, tostring, tonumber, getmetatable, setmetatable, rawset =
@@ -14,10 +14,10 @@ local strrep, gsub, strsub, strbyte, strchar, strfind, strlen, strformat =
 local strmatch = string.match
 local concat = table.concat
 
-local json = { version = "dkjson 2.4" }
+local xt = { version = "dkxt 2.4" }
 
 if register_global_module_table then
-  _G[global_module_name] = json
+  _G[global_module_name] = xt
 end
 
 local _ENV = nil -- blocking globals in Lua 5.2
@@ -29,8 +29,8 @@ pcall (function()
   if debmeta then getmetatable = debmeta end
 end)
 
-json.null = setmetatable ({}, {
-  __tojson = function () return "null" end
+xt.null = setmetatable ({}, {
+  __toxt = function () return "null" end
 })
 
 local function isarray (tbl)
@@ -104,7 +104,7 @@ local function fsub (str, pattern, repl)
 end
 
 local function quotestring (value)
-  -- based on the regexp "escapable" in https://github.com/douglascrockford/JSON-js
+  -- based on the regexp "escapable" in https://github.com/douglascrockford/xt-js
   value = fsub (value, "[%z\1-\31\"\\\127]", escapeutf8)
   if strfind (value, "[\194\216\220\225\226\239]") then
     value = fsub (value, "\194[\128-\159\173]", escapeutf8)
@@ -118,7 +118,7 @@ local function quotestring (value)
   end
   return "\"" .. value .. "\""
 end
-json.quotestring = quotestring
+xt.quotestring = quotestring
 
 local function replace(str, o, n)
   local i, j = strfind (str, o, 1, true)
@@ -160,7 +160,7 @@ local function addnewline2 (level, buffer, buflen)
   return buflen
 end
 
-function json.addnewline (state)
+function xt.addnewline (state)
   if state.indent then
     state.bufferlen = addnewline2 (state.level or 0,
                            state.buffer, state.bufferlen or #(state.buffer))
@@ -172,7 +172,7 @@ local encode2 -- forward declaration
 local function addpair (key, value, prev, indent, level, buffer, buflen, tables, globalorder)
   local kt = type (key)
   if kt ~= 'string' and kt ~= 'number' then
-    return nil, "type '" .. kt .. "' is not supported as a key by JSON."
+    return nil, "type '" .. kt .. "' is not supported as a key by xt."
   end
   if prev then
     buflen = buflen + 1
@@ -190,8 +190,8 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder)
   local valtype = type (value)
   local valmeta = getmetatable (value)
   valmeta = type (valmeta) == 'table' and valmeta -- only tables
-  local valtojson = valmeta and valmeta.__tojson
-  if valtojson then
+  local valtoxt = valmeta and valmeta.__toxt
+  if valtoxt then
     if tables[value] then
       return nil, "reference cycle"
     end
@@ -200,7 +200,7 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder)
         indent = indent, level = level, buffer = buffer,
         bufferlen = buflen, tables = tables, keyorder = globalorder
     }
-    local ret, msg = valtojson (value, state)
+    local ret, msg = valtoxt (value, state)
     if not ret then return nil, msg end
     tables[value] = nil
     buflen = state.bufferlen
@@ -214,7 +214,7 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder)
   elseif valtype == 'number' then
     local s
     if value ~= value or value >= huge or -value >= huge then
-      -- This is the behaviour of the original JSON implementation.
+      -- This is the behaviour of the original xt implementation.
       s = "null"
     else
       s = num2str (value)
@@ -234,11 +234,11 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder)
     tables[value] = true
     level = level + 1
     local isa, n = isarray (value)
-    if n == 0 and valmeta and valmeta.__jsontype == 'object' then
+    if n == 0 and valmeta and valmeta.__xttype == 'object' then
       isa = false
     end
     local msg
-    if isa then -- JSON array
+    if isa then -- xt array
       buflen = buflen + 1
       buffer[buflen] = "["
       for i = 1, n do
@@ -251,11 +251,11 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder)
       end
       buflen = buflen + 1
       buffer[buflen] = "]"
-    else -- JSON object
+    else -- xt object
       local prev = false
       buflen = buflen + 1
       buffer[buflen] = "{"
-      local order = valmeta and valmeta.__jsonorder or globalorder
+      local order = valmeta and valmeta.__xtorder or globalorder
       if order then
         local used = {}
         n = #order
@@ -290,12 +290,12 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder)
     end
     tables[value] = nil
   else
-    return nil, "type '" .. valtype .. "' is not supported by JSON."
+    return nil, "type '" .. valtype .. "' is not supported by xt."
   end
   return buflen
 end
 
-function json.encode (value, state)
+function xt.encode (value, state)
   state = state or {}
   local oldbuffer = state.buffer
   local buffer = oldbuffer or {}
@@ -483,7 +483,7 @@ scanvalue = function (str, pos, nullval, objectmeta, arraymeta)
   pos = pos or 1
   pos = scanwhite (str, pos)
   if not pos then
-    return nil, strlen (str) + 1, "no valid JSON value (reached the end)"
+    return nil, strlen (str) + 1, "no valid xt value (reached the end)"
   end
   local char = strsub (str, pos, pos)
   if char == "{" then
@@ -511,7 +511,7 @@ scanvalue = function (str, pos, nullval, objectmeta, arraymeta)
         return nullval, pend + 1
       end
     end
-    return nil, pos, "no valid JSON value at " .. loc (str, pos)
+    return nil, pos, "no valid xt value at " .. loc (str, pos)
   end
 end
 
@@ -519,20 +519,20 @@ local function optionalmetatables(...)
   if select("#", ...) > 0 then
     return ...
   else
-    return {__jsontype = 'object'}, {__jsontype = 'array'}
+    return {__xttype = 'object'}, {__xttype = 'array'}
   end
 end
 
-function json.decode (str, pos, nullval, ...)
+function xt.decode (str, pos, nullval, ...)
   local objectmeta, arraymeta = optionalmetatables(...)
   return scanvalue (str, pos, nullval, objectmeta, arraymeta)
 end
 
-function json.use_lpeg ()
+function xt.use_lpeg ()
   local g = require ("lpeg")
 
   if g.version() == "0.11" then
-    error "due to a bug in LPeg 0.11, it cannot be used for JSON matching"
+    error "due to a bug in LPeg 0.11, it cannot be used for xt matching"
   end
 
   local pegmatch = g.match
@@ -616,7 +616,7 @@ function json.use_lpeg ()
   ObjectContent = Pair * Space * (P"," * g.Cc'cont' + g.Cc'last') * g.Cp()
   local DecodeValue = ExpectedValue * g.Cp ()
 
-  function json.decode (str, pos, nullval, ...)
+  function xt.decode (str, pos, nullval, ...)
     local state = {}
     state.objectmeta, state.arraymeta = optionalmetatables(...)
     local obj, retpos = pegmatch (DecodeValue, str, pos, nullval, state)
@@ -628,17 +628,17 @@ function json.use_lpeg ()
   end
 
   -- use this function only once:
-  json.use_lpeg = function () return json end
+  xt.use_lpeg = function () return xt end
 
-  json.using_lpeg = true
+  xt.using_lpeg = true
 
-  return json -- so you can get the module using json = require "dkjson".use_lpeg()
+  return xt -- so you can get the module using xt = require "dkxt".use_lpeg()
 end
 
 if always_try_using_lpeg then
-  pcall (json.use_lpeg)
+  pcall (xt.use_lpeg)
 end
 
-return json
+return xt
 
 -->
